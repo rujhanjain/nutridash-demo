@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Meal Program Chatbot Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 700px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            border-bottom: 2px solid #34495e;
+        }
+
+        .chat-body {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            height: 400px;
+            background: #ecf0f1;
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 12px 18px;
+            border-radius: 10px;
+            max-width: 90%;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .user-message {
+            background: #3498db;
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background: #e5e7eb;
+            color: #2c3e50;
+            align-self: flex-start;
+        }
+
+        .input-container {
+            padding: 15px;
+            background: #f7f9fb;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 25px;
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #3498db;
+        }
+
+        button {
+            padding: 12px 25px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Loading Styles */
+        .loading img {
+            width: 32px;
+            height: 32px;
+            display: block;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">NutriBantu - Your Nutrition, Your Insights, Your Solution</div>
+        <div class="chat-body" id="chatBody"></div>
+        <div class="input-container">
+            <input type="text" id="chatInput" placeholder="Ask about the Free Meal Program...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+    const chatBody = document.getElementById('chatBody');
+    const chatInput = document.getElementById('chatInput');
+    const typingSpeed = 20; // Set to 20ms as requested, adjustable for character typing speed
+
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+
+    function addMessage(message, isUser, callback) {
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.flexDirection = 'column';
+        wrapper.style.alignItems = isUser ? 'flex-end' : 'flex-start';
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+
+        if (isUser) {
+            messageDiv.textContent = message; // User messages don't need formatting
+            wrapper.appendChild(messageDiv);
+            chatBody.appendChild(wrapper);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        } else {
+            wrapper.appendChild(messageDiv);
+            chatBody.appendChild(wrapper);
+            typeMessage(messageDiv, message, callback);
+        }
+    }
+
+    function addLoadingMessage() {
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.flexDirection = 'column';
+        wrapper.style.alignItems = 'flex-start';
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message bot-message loading';
+        messageDiv.innerHTML = '<img src="loader.gif" alt="Loading...">'; // Placeholder loader
+        wrapper.appendChild(messageDiv);
+
+        chatBody.appendChild(wrapper);
+        chatBody.scrollTop = chatBody.scrollHeight;
+        return wrapper;
+    }
+
+    // Type message line by line and apply formatting afterward
+    function typeMessage(element, message, callback) {
+        const lines = message.trim().split('\n').filter(line => line.trim() !== ''); // Split into lines, remove empty ones
+        let lineIndex = 0;
+        element.innerHTML = '';
+
+        function typeLine() {
+            if (lineIndex >= lines.length) {
+                formatAndDisplay(element);
+                chatBody.scrollTop = chatBody.scrollHeight;
+                if (callback) callback();
+                return;
+            }
+
+            const currentLine = lines[lineIndex];
+            let charIndex = 0;
+
+            function typeCharacter() {
+                if (charIndex < currentLine.length) {
+                    element.innerHTML = lines.slice(0, lineIndex).join('<br>') + '<br>' + currentLine.substring(0, charIndex + 1);
+                    charIndex++;
+                    setTimeout(typeCharacter, typingSpeed); // Use typingSpeed here
+                } else {
+                    lineIndex++;
+                    setTimeout(typeLine, 200); // Small pause between lines
+                }
+            }
+
+            typeCharacter();
+        }
+
+        typeLine();
+
+        // Apply formatting after typing is complete
+        function formatAndDisplay(element) {
+            let formattedHTML = '';
+            let inList = false;
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('* ')) {
+                    if (!inList) {
+                        formattedHTML += '<ul>';
+                        inList = true;
+                    }
+                    formattedHTML += `<li style="list-style-type: disc; margin-left: 20px">${trimmed.slice(2).trim()}</li>`;
+                } else {
+                    if (inList) {
+                        formattedHTML += '</ul>';
+                        inList = false;
+                    }
+                    formattedHTML += trimmed.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') + '<br>';
+                }
+            });
+
+            if (inList) formattedHTML += '</ul>';
+            element.innerHTML = formattedHTML.replace(/<br>$/, ''); // Remove trailing <br>
+        }
+    }
+
+    // Static Q&A database
+    const qaDatabase = {
+        "what is the free meal program?": `
+            Selamat pagi! Thank you for your interest in the Free Meal Program.
+
+            * This is a government initiative to provide nutritious meals to school children.
+            * It aims to improve health and support education across Indonesia.
+
+            We’re excited to showcase this demo for future enhancements!
+        `,
+        "which is currently the worst province in terms of children's nutrition?": `
+            Selamat siang! Thank you for your question about children's nutrition.
+
+				* Kalimantan Tengah is currently the worst province in this regard.
+				* This is due to an average BMI of 16.5 for children, indicating low nutrition levels.
+				* Total medical issues related to poor nutrition are around 20,000 cases.
+				* Factors include low nutritious food availability and high meal wastage—approximately 200,000 units last year.
+				* A major reason is inefficient kitchens; despite a student population of [insert size here], there are only 10 kitchens.
+
+			Addressing this is a priority for the Free Meal Program!
+        `,
+        "which regions are showing the most inefficiencies in kitchen operations for the free meal program, and what factors are driving these issues?": `
+            Selamat pagi! Thank you for exploring kitchen efficiency with our dashboard demo.
+
+				* Analytical data highlights provinces like Kalimantan Tengah and districts in Papua with significant inefficiencies.
+				* Key factors include limited kitchen staff training, leading to slow meal preparation times.
+				* Outdated equipment in cities like Samarinda causes delays and inconsistent food quality.
+				* In rural districts, poor coordination between schools and kitchens disrupts timely meal delivery.
+
+			These insights can guide targeted improvements in the program!
+        `,
+        "where are the highest cost overruns occurring in the free meal program’s process, and what cost-related factors are most problematic?": `
+            Halo! Great to dive into cost analysis with our dashboard demo.
+
+				* High labour costs are evident in urban centers like Jakarta due to premium wages and overtime.
+				* Equipment expenses spike in Sulawesi cities, where frequent repairs of aging appliances drain budgets.
+				* Operations costs rise in remote districts from inefficient energy use in kitchens.
+				* Logistics challenges in Papua increase expenses due to difficult terrain and fuel costs.
+				* Ingredient prices fluctuate in Java, worsened by supply chain delays and spoilage.
+
+			Pinpointing these factors can optimize resource allocation!
+        `,
+		"which areas are experiencing the greatest food wastage due to infrastructure issues in the free meal program, and what are the underlying causes?":`
+			Selamat siang! Let’s examine food wastage through our dashboard demo.
+
+				* High wastage is noted in regions like Nusa Tenggara Timur, especially in rural districts.
+				* Poor storage infrastructure leads to spoilage, with inadequate refrigeration in hot climates.
+				* Weak transportation networks in mountainous areas delay deliveries, causing food to perish.
+				* Insufficient kitchen capacity in growing cities like Makassar results in overproduction and waste.
+
+			These findings highlight where infrastructure upgrades are most needed!
+		`
+    };
+
+    function sendMessage() {
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        addMessage(message, true);
+        chatInput.value = '';
+
+        const loadingWrapper = addLoadingMessage();
+
+        // Simulate delay and fetch response
+        setTimeout(() => {
+            chatBody.removeChild(loadingWrapper);
+            const response = qaDatabase[message.toLowerCase()] || qaDatabase["default"];
+            addMessage(response, false);
+        }, 2000); // 2-second delay for demo effect
+    }
+
+    window.onload = function() {
+        addMessage(`Halo! Welcome to the Free Meal Program Chatbot Demo.
+            I’m here to showcase how AI can assist with program inquiries.
+            Try asking: "What is the Free Meal Program?" or "Who can join the program?"
+        `, false);
+    };
+    </script>
+</body>
+</html>
